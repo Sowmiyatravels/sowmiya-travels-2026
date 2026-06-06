@@ -1,17 +1,14 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "admin/admin.html", "use": "@vercel/static" },
-    { "src": "logo.jpg", "use": "@vercel/static" }
-  ],
+  "functions": {
+    "api/send-otp.js": { "maxDuration": 15 },
+    "api/send-whatsapp.js": { "maxDuration": 15 }
+  },
   "routes": [
+    { "src": "/api/send-otp", "dest": "/api/send-otp.js" },
+    { "src": "/api/send-whatsapp", "dest": "/api/send-whatsapp.js" },
     { "src": "/admin", "dest": "/admin/admin.html" },
     { "src": "/admin/", "dest": "/admin/admin.html" },
     { "src": "/", "dest": "/index.html" }
-  ],
-  "env": {
-    "SUPABASE_URL": "https://lhylfcxjwenvwfggptnh.supabase.co",
-    "SUPABASE_ANON_KEY": "sb_publishable_hUoRIprUXQO_1sAvAse1NQ_ERj9sfUP"
-  }
+  ]
 }
