@@ -613,19 +613,19 @@ function getOTPCooldownRemaining(phone) {
   return Math.max(0, remaining);
 }
 
-// ── CLEAR STALE SUPABASE AUTH KEYS (prevents email rate-limit toast) ──
-(function clearSupabaseAuthKeys() {
+// ── SUPABASE CLIENT ─────────────────────────────────────────
+// auth.persistSession:false → stops SDK storing/refreshing Supabase Auth
+// sessions in localStorage, which caused "email rate limit exceeded" toast.
+// Supabase database (from/select/insert/upsert) still works fully.
+let _supabase = null;
+function getSupabase() {
+  if (_supabase) return _supabase;
+  // Clear any stale Supabase Auth tokens from previous sessions
   try {
     Object.keys(localStorage)
       .filter(k => k.startsWith('sb-') && k.includes('-auth-token'))
       .forEach(k => localStorage.removeItem(k));
   } catch(e) {}
-})();
-
-// ── SUPABASE CLIENT ─────────────────────────────────────────
-let _supabase = null;
-function getSupabase() {
-  if (_supabase) return _supabase;
   _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       autoRefreshToken: false,
@@ -916,11 +916,23 @@ async function sendLoginOTP() {
   state.authPhone = cleaned;
   state.authName = name;
 
-  // Generate OTP — stored in memory as primary verify source
+  // Generate OTP — stored in memory (primary) + otp_logs table (fallback)
   const otp = generateOTP();
   state.currentOTP = otp;
   state.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 min
   markOTPSent(cleaned);
+
+  // Save to otp_logs table — no auth required, plain DB insert
+  try {
+    const sb = getSupabase();
+    await sb.from('otp_logs').insert({
+      phone: cleaned,
+      otp_code: otp,
+      purpose: 'login',
+      is_used: false,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    });
+  } catch(e) { /* memory OTP still works as primary */ }
 
   // Switch to OTP screen immediately
   document.getElementById('auth-step-phone').style.display = 'none';
@@ -947,11 +959,36 @@ async function verifyLoginOTP() {
   const inputOtp = Array.from(boxes).map(b => b.value.trim()).join('');
   if (inputOtp.length !== 6) { showToast('Enter all 6 digits', 'error'); return; }
 
-  // Verify against in-memory OTP only — NO Supabase auth calls
-  const isValid = verifyOTP(state.authPhone, inputOtp);
+  // PRIMARY: verify against in-memory OTP
+  // FALLBACK: verify against otp_logs table (handles page refresh edge case)
+  let isValid = verifyOTP(state.authPhone, inputOtp);
+
+  if (!isValid) {
+    // Fallback: check otp_logs table
+    try {
+      const sb = getSupabase();
+      const { data } = await sb.from('otp_logs')
+        .select('id, otp_code, expires_at, is_used')
+        .eq('phone', state.authPhone)
+        .eq('otp_code', inputOtp)
+        .eq('is_used', false)
+        .eq('purpose', 'login')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data && data.length > 0) {
+        isValid = true;
+        // Mark as used
+        await sb.from('otp_logs').update({ is_used: true }).eq('id', data[0].id);
+      }
+    } catch(e) { /* fallback failed, rely on memory result */ }
+  }
+
   if (!isValid) { showToast('Incorrect OTP. Try again or resend.', 'error'); return; }
 
-  // Build user profile — stored in localStorage, no Supabase email auth needed
+  // Build customer profile — stored in localStorage only
+  // NOTE: profiles table requires auth.users UUID so we don't touch it here.
+  // Customer identity is phone-based; bookings store customer_name + customer_phone directly.
   const userProfile = {
     id: 'st_' + state.authPhone,
     full_name: state.authName || 'Traveller',
@@ -959,20 +996,17 @@ async function verifyLoginOTP() {
     role: 'customer'
   };
   state.user = userProfile;
-
-  // Save to localStorage — survives page refresh, no Supabase email rate limits
   localStorage.setItem('st_user', JSON.stringify(userProfile));
 
-  // Save profile to Supabase profiles table only (no auth, just data)
+  // Mark all OTP logs for this phone as used (cleanup)
   try {
     const sb = getSupabase();
-    await sb.from('profiles').upsert({
-      id: state.authPhone, // use phone as ID since no auth
-      full_name: state.authName || 'Traveller',
-      phone: state.authPhone,
-      role: 'customer'
-    }, { onConflict: 'phone' }).catch(() => {});
-  } catch(e) { /* ignore — localStorage login already works */ }
+    await sb.from('otp_logs')
+      .update({ is_used: true })
+      .eq('phone', state.authPhone)
+      .eq('purpose', 'login')
+      .eq('is_used', false);
+  } catch(e) { /* non-critical */ }
 
   clearInterval(state.resendTimer);
 
