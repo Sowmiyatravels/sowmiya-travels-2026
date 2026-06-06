@@ -801,14 +801,6 @@ const QUICK_AREAS = [
 
 // ── INIT ───────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  // Suppress Supabase auth error events (email rate limit toasts etc.)
-  try {
-    const sb = getSupabase();
-    sb.auth.onAuthStateChange((event, session) => {
-      // intentionally ignored — we use custom WhatsApp OTP, not Supabase auth
-    });
-  } catch(e) {}
-
   createParticles();
   renderQuickChips();
   setMinDate();
@@ -1506,7 +1498,6 @@ function toggleMenu() {
 }
 
 window.signOut = async () => {
-  try { const sb = getSupabase(); await sb.auth.signOut(); } catch(e) {}
   state.user = null;
   localStorage.removeItem('st_user');
   document.getElementById('btn-login-nav').style.display = 'block';
