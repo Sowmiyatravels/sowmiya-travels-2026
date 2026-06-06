@@ -1,6 +1,17 @@
 {
-  "rewrites": [
-    { "source": "/admin", "destination": "/admin/admin.html" },
-    { "source": "/admin/", "destination": "/admin/admin.html" }
-  ]
+  "version": 2,
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "admin/admin.html", "use": "@vercel/static" },
+    { "src": "logo.jpg", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/admin", "dest": "/admin/admin.html" },
+    { "src": "/admin/", "dest": "/admin/admin.html" },
+    { "src": "/", "dest": "/index.html" }
+  ],
+  "env": {
+    "SUPABASE_URL": "https://lhylfcxjwenvwfggptnh.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_hUoRIprUXQO_1sAvAse1NQ_ERj9sfUP"
+  }
 }
