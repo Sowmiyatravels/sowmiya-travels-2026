@@ -1273,6 +1273,8 @@ function pickLocation(inputId, dropdownId, field, lat, lng, name) {
   document.getElementById(dropdownId).style.display = 'none';
   if (field === 'pickup') state.pickupCoords = { lat, lng };
   else state.dropCoords = { lat, lng };
+  // Refresh fare preview so Auto button enables when both coords are set
+  updateFarePreview();
 }
 
 function selectVehicle(id) {
@@ -1355,36 +1357,57 @@ function updateFarePreview() {
   }
 }
 
-// ── AUTO DETECT DISTANCE via Geoapify Routing API ──────────
-async function autoDetectDistance() {
+// ── AUTO DETECT DISTANCE ────────────────────────────────────
+// Haversine formula — straight-line distance multiplier 1.35 for road estimate
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2)
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+window.autoDetectDistance = async function() {
   if (!state.pickupCoords || !state.dropCoords) {
-    showToast('Enter pickup and drop locations first', 'error'); return;
+    showToast('Select pickup & drop from the suggestions first', 'error'); return;
   }
+
   const btn = document.querySelector('button[onclick="autoDetectDistance()"]');
   if (btn) { btn.textContent = '⏳…'; btn.disabled = true; }
 
-  try {
-    const { lat: lat1, lng: lng1 } = state.pickupCoords;
-    const { lat: lat2, lng: lng2 } = state.dropCoords;
+  const { lat: lat1, lng: lng1 } = state.pickupCoords;
+  const { lat: lat2, lng: lng2 } = state.dropCoords;
 
+  let distanceKm = null;
+  let method = '';
+
+  // Try Geoapify Routing API first (real road distance)
+  try {
     const url = `https://api.geoapify.com/v1/routing?waypoints=${lat1},${lng1}|${lat2},${lng2}&mode=drive&apiKey=${GEOAPIFY_KEY}`;
     const res = await fetch(url);
     const data = await res.json();
-
-    const distanceM = data?.features?.[0]?.properties?.distance;
-    if (!distanceM) throw new Error('No route found');
-
-    const distanceKm = Math.ceil(distanceM / 1000); // round up to nearest km
-    const input = document.getElementById('fare-qty-input');
-    if (input) {
-      input.value = distanceKm;
-      updateFarePreview();
+    const distM = data?.features?.[0]?.properties?.distance;
+    if (distM && distM > 0) {
+      distanceKm = Math.ceil(distM / 1000);
+      method = 'road route';
     }
-    showToast(`📍 Distance: ~${distanceKm} km (auto detected)`, 'success');
-  } catch(e) {
-    showToast('Could not auto-detect distance. Enter manually.', 'warning');
-    console.warn('Distance API error:', e.message);
+  } catch(e) { console.warn('Routing API failed, using haversine:', e.message); }
+
+  // Fallback: haversine × 1.35 road factor
+  if (!distanceKm) {
+    const straight = haversineKm(lat1, lng1, lat2, lng2);
+    distanceKm = Math.ceil(straight * 1.35);
+    method = 'estimated';
   }
+
+  const input = document.getElementById('fare-qty-input');
+  if (input) {
+    input.value = distanceKm;
+    updateFarePreview();
+  }
+  showToast(`📍 ${distanceKm} km (${method})`, 'success');
 
   if (btn) { btn.textContent = '📍 Auto'; btn.disabled = false; }
 }
