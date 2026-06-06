@@ -613,6 +613,15 @@ function getOTPCooldownRemaining(phone) {
   return Math.max(0, remaining);
 }
 
+// ── CLEAR STALE SUPABASE AUTH KEYS (prevents email rate-limit toast) ──
+(function clearSupabaseAuthKeys() {
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('sb-') && k.includes('-auth-token'))
+      .forEach(k => localStorage.removeItem(k));
+  } catch(e) {}
+})();
+
 // ── SUPABASE CLIENT ─────────────────────────────────────────
 let _supabase = null;
 function getSupabase() {
@@ -792,6 +801,14 @@ const QUICK_AREAS = [
 
 // ── INIT ───────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  // Suppress Supabase auth error events (email rate limit toasts etc.)
+  try {
+    const sb = getSupabase();
+    sb.auth.onAuthStateChange((event, session) => {
+      // intentionally ignored — we use custom WhatsApp OTP, not Supabase auth
+    });
+  } catch(e) {}
+
   createParticles();
   renderQuickChips();
   setMinDate();
