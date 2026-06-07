@@ -298,3 +298,28 @@ ON CONFLICT DO NOTHING;
 -- QUICK ADMIN SETUP (run manually after first user signs up)
 -- UPDATE profiles SET role = 'admin' WHERE phone = 'YOUR_PHONE';
 -- ============================================================
+
+-- ============================================================
+-- PAYMENT VERIFICATIONS TABLE (manual + auto verify tracking)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS payment_verifications (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
+  booking_number TEXT,
+  customer_phone TEXT,
+  amount NUMERIC(10,2),
+  utr_number TEXT,
+  screenshot_url TEXT,
+  payment_method TEXT,
+  status TEXT DEFAULT 'pending_review' CHECK (status IN ('pending_review', 'verified', 'rejected')),
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE payment_verifications DISABLE ROW LEVEL SECURITY;
+
+-- Supabase Storage bucket for payment screenshots
+-- Run this once in Supabase Dashboard > Storage > New bucket:
+-- Bucket name: payment-screenshots | Public: true
+-- OR run: INSERT INTO storage.buckets (id, name, public) VALUES ('payment-screenshots', 'payment-screenshots', true) ON CONFLICT DO NOTHING;
