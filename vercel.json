@@ -4,11 +4,11 @@
     "api/send-otp.js": { "maxDuration": 15 },
     "api/send-whatsapp.js": { "maxDuration": 15 }
   },
-  "rewrites": [
-    { "source": "/api/send-otp", "destination": "/api/send-otp.js" },
-    { "source": "/api/send-whatsapp", "destination": "/api/send-whatsapp.js" },
-    { "source": "/admin", "destination": "/admin/admin.html" },
-    { "source": "/admin/", "destination": "/admin/admin.html" },
-    { "source": "/", "destination": "/index.html" }
+  "routes": [
+    { "src": "/api/send-otp", "dest": "/api/send-otp.js" },
+    { "src": "/api/send-whatsapp", "dest": "/api/send-whatsapp.js" },
+    { "src": "/admin", "dest": "/admin/admin.html" },
+    { "src": "/admin/(.*)", "dest": "/admin/admin.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
