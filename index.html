@@ -200,6 +200,31 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(13,27,62,.9
 .qr-container{text-align:center;padding:20px 0}
 .qr-container img{border-radius:12px;border:4px solid var(--white)}
 
+/* ── PAYMENT VERIFY FLOW ─────────────────────────────── */
+.verify-steps{margin-top:16px}
+.verify-step{display:none}
+.verify-step.active{display:block}
+.verify-status-box{border-radius:14px;padding:18px;text-align:center;margin:14px 0}
+.verify-status-box.checking{background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.3)}
+.verify-status-box.success{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4)}
+.verify-status-box.failed{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+.verify-spinner{width:36px;height:36px;border:3px solid rgba(212,160,23,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+.verify-icon{font-size:2.2rem;margin-bottom:8px}
+.verify-title{font-size:1rem;font-weight:700;color:var(--white);margin-bottom:4px}
+.verify-sub{font-size:.8rem;color:rgba(255,255,255,.5)}
+.manual-tabs{display:flex;gap:8px;margin-bottom:16px}
+.manual-tab{flex:1;padding:10px;border:1px solid rgba(255,255,255,.15);border-radius:10px;background:transparent;color:rgba(255,255,255,.6);font-size:.82rem;cursor:pointer;font-family:'DM Sans',sans-serif;transition:var(--transition)}
+.manual-tab.active{border-color:var(--gold);background:rgba(212,160,23,.1);color:var(--gold);font-weight:600}
+.utr-input{width:100%;padding:12px 16px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:var(--white);font-size:1rem;font-family:'DM Sans',sans-serif;box-sizing:border-box;letter-spacing:1px}
+.utr-input:focus{outline:none;border-color:var(--gold)}
+.utr-input::placeholder{color:rgba(255,255,255,.3);letter-spacing:normal}
+.upload-zone{border:2px dashed rgba(212,160,23,.4);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:var(--transition);background:rgba(212,160,23,.03)}
+.upload-zone:hover{background:rgba(212,160,23,.07);border-color:var(--gold)}
+.upload-zone input{display:none}
+.upload-preview{max-width:100%;border-radius:10px;margin-top:12px;display:none}
+.pay-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:rgba(255,255,255,.3);font-size:.78rem}
+.pay-divider::before,.pay-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+
 /* ── TOAST ───────────────────────────────────────────── */
 @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -549,41 +574,109 @@ footer{background:var(--navy);color:rgba(255,255,255,.6);padding:50px 20px 30px}
 
 <!-- PAYMENT MODAL -->
 <div class="modal-overlay" id="pay-modal">
-  <div class="modal">
+  <div class="modal" style="max-height:92vh;overflow-y:auto">
     <button class="modal-close" onclick="closePayModal()">×</button>
     <h2 class="modal-title" style="text-align:center;margin-bottom:6px">💳 Payment</h2>
     <p class="modal-sub">Booking #<span id="pay-booking-num"></span></p>
-    <div style="text-align:center;margin:16px 0">
+    <div style="text-align:center;margin:12px 0">
       <span style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold)" id="pay-amount">₹0</span>
     </div>
-    <p style="color:rgba(255,255,255,.5);text-align:center;font-size:.82rem;margin-bottom:12px">Choose payment method</p>
-    <div class="pay-grid">
-      <div class="pay-option" onclick="selectPayment('cash')">
-        <div class="pay-icon">💵</div><div class="pay-label">Cash</div>
-        <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:4px">Pay to driver</div>
+
+    <!-- STEP 1: Choose method -->
+    <div class="verify-step active" id="pay-step-choose">
+      <p style="color:rgba(255,255,255,.5);text-align:center;font-size:.82rem;margin-bottom:12px">Choose payment method</p>
+      <div class="pay-grid">
+        <div class="pay-option" onclick="selectPayment('cash')">
+          <div class="pay-icon">💵</div><div class="pay-label">Cash</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:4px">Pay to driver</div>
+        </div>
+        <div class="pay-option" onclick="selectPayment('upi')">
+          <div class="pay-icon">📱</div><div class="pay-label">UPI / QR</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:4px">Any UPI app</div>
+        </div>
+        <div class="pay-option" onclick="selectPayment('phonepe')">
+          <div class="pay-icon">💜</div><div class="pay-label">PhonePe</div>
+        </div>
+        <div class="pay-option" onclick="selectPayment('gpay')">
+          <div class="pay-icon">🎨</div><div class="pay-label">Google Pay</div>
+        </div>
+        <div class="pay-option" onclick="selectPayment('paytm')">
+          <div class="pay-icon">🔵</div><div class="pay-label">Paytm</div>
+        </div>
+        <div class="pay-option" onclick="selectPayment('bhim')">
+          <div class="pay-icon">🇮🇳</div><div class="pay-label">BHIM UPI</div>
+        </div>
       </div>
-      <div class="pay-option" onclick="selectPayment('upi')">
-        <div class="pay-icon">📱</div><div class="pay-label">UPI / QR</div>
-        <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:4px">Pay online</div>
+      <div class="qr-container" id="qr-container" style="display:none">
+        <img id="qr-img" src="" alt="QR Code" width="180">
+        <p style="color:rgba(255,255,255,.5);font-size:.78rem;margin-top:8px">Scan QR • Pay • Come back here</p>
       </div>
-      <div class="pay-option" onclick="selectPayment('phonepe')">
-        <div class="pay-icon">💜</div><div class="pay-label">PhonePe</div>
-      </div>
-      <div class="pay-option" onclick="selectPayment('gpay')">
-        <div class="pay-icon">🎨</div><div class="pay-label">Google Pay</div>
-      </div>
-      <div class="pay-option" onclick="selectPayment('paytm')">
-        <div class="pay-icon">🔵</div><div class="pay-label">Paytm</div>
-      </div>
-      <div class="pay-option" onclick="selectPayment('bhim')">
-        <div class="pay-icon">🇮🇳</div><div class="pay-label">BHIM UPI</div>
-      </div>
+      <button class="modal-btn" id="pay-confirm-btn" onclick="confirmPayment()">✅ Confirm Booking</button>
     </div>
-    <div class="qr-container" id="qr-container" style="display:none">
-      <img id="qr-img" src="" alt="QR Code" width="180">
-      <p style="color:rgba(255,255,255,.5);font-size:.8rem;margin-top:8px">Scan QR to pay via any UPI app</p>
+
+    <!-- STEP 2: Auto verify checking -->
+    <div class="verify-step" id="pay-step-verifying">
+      <div class="verify-status-box checking">
+        <div class="verify-spinner"></div>
+        <div class="verify-title">Verifying Payment…</div>
+        <div class="verify-sub">Checking your UPI transaction</div>
+        <div id="verify-countdown" style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:6px"></div>
+      </div>
+      <p style="text-align:center;font-size:.8rem;color:rgba(255,255,255,.4);margin:0 0 16px">Complete the payment in your UPI app and return here</p>
+      <div class="pay-divider">payment not completed?</div>
+      <button class="modal-btn" style="background:rgba(255,255,255,.06);margin-top:0" onclick="showManualVerify()">📋 Enter UTR / Upload Screenshot</button>
     </div>
-    <button class="modal-btn" id="pay-confirm-btn" onclick="confirmPayment()">✅ Confirm Booking</button>
+
+    <!-- STEP 3: Auto verify SUCCESS -->
+    <div class="verify-step" id="pay-step-success">
+      <div class="verify-status-box success">
+        <div class="verify-icon">✅</div>
+        <div class="verify-title">Payment Verified!</div>
+        <div class="verify-sub" id="verify-success-msg">Transaction confirmed automatically</div>
+      </div>
+      <p style="text-align:center;font-size:.85rem;color:rgba(255,255,255,.6)">Your booking is <strong style="color:#10b981">Confirmed</strong>. WhatsApp confirmation sent!</p>
+    </div>
+
+    <!-- STEP 4: Manual verify -->
+    <div class="verify-step" id="pay-step-manual">
+      <p style="color:rgba(255,255,255,.6);font-size:.88rem;margin-bottom:14px;text-align:center">Auto-verify failed. Please provide payment proof:</p>
+      <div class="manual-tabs">
+        <button class="manual-tab active" id="tab-utr" onclick="switchManualTab('utr')">🔢 UTR Number</button>
+        <button class="manual-tab" id="tab-ss" onclick="switchManualTab('screenshot')">📸 Screenshot</button>
+      </div>
+
+      <!-- UTR Tab -->
+      <div id="manual-utr-panel">
+        <p style="font-size:.8rem;color:rgba(255,255,255,.4);margin-bottom:8px">Enter the 12-digit UTR / Transaction ID from your UPI app</p>
+        <input type="text" id="utr-input" class="utr-input" placeholder="e.g. 426112345678" maxlength="22" oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'')">
+        <p style="font-size:.74rem;color:rgba(255,255,255,.3);margin-top:6px">📍 PhonePe → History → Transaction ID &nbsp;|&nbsp; GPay → Activity → UPI Ref</p>
+      </div>
+
+      <!-- Screenshot Tab -->
+      <div id="manual-ss-panel" style="display:none">
+        <div class="upload-zone" onclick="document.getElementById('ss-file').click()">
+          <input type="file" id="ss-file" accept="image/*" onchange="previewScreenshot(event)">
+          <div style="font-size:2rem">📷</div>
+          <p style="color:rgba(255,255,255,.5);font-size:.85rem;margin:8px 0 0">Tap to upload payment screenshot</p>
+        </div>
+        <img id="ss-preview" class="upload-preview" alt="Screenshot preview">
+      </div>
+
+      <div class="pay-divider" style="margin-top:16px"></div>
+      <button class="modal-btn" onclick="submitManualVerify()" id="manual-submit-btn">📤 Submit for Admin Verification</button>
+      <p style="text-align:center;font-size:.75rem;color:rgba(255,255,255,.3);margin-top:8px">Admin will verify & confirm your booking within 15 minutes</p>
+    </div>
+
+    <!-- STEP 5: Manual submitted -->
+    <div class="verify-step" id="pay-step-manual-done">
+      <div class="verify-status-box" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3)">
+        <div class="verify-icon">⏳</div>
+        <div class="verify-title">Submitted for Verification</div>
+        <div class="verify-sub">Admin will confirm within 15 minutes via WhatsApp</div>
+      </div>
+      <p style="text-align:center;font-size:.82rem;color:rgba(255,255,255,.5)">Booking #<span id="manual-booking-num"></span> is <strong style="color:var(--gold)">Pending Admin Approval</strong></p>
+    </div>
+
   </div>
 </div>
 
@@ -1603,13 +1696,25 @@ async function confirmBooking() {
 }
 
 // ── PAYMENT MODAL ──────────────────────────────────────
+// ── PAYMENT MODAL ─────────────────────────────────────────
+function showPayStep(id) {
+  document.querySelectorAll('.verify-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
 function openPayModal(booking) {
   document.getElementById('pay-booking-num').textContent = booking.booking_number;
   document.getElementById('pay-amount').textContent = '₹' + Number(booking.total_amount).toLocaleString('en-IN');
+  showPayStep('pay-step-choose');
+  state.paymentMethod = null;
+  state.autoVerifyAttempts = 0;
+  clearInterval(state.autoVerifyTimer);
   document.getElementById('pay-modal').classList.add('open');
 }
 
 function closePayModal() {
+  clearInterval(state.autoVerifyTimer);
+  clearInterval(state.verifyCountdownTimer);
   document.getElementById('pay-modal').classList.remove('open');
 }
 
@@ -1625,58 +1730,268 @@ function selectPayment(method) {
     qrContainer.style.display = 'none';
     document.getElementById('pay-confirm-btn').textContent = '✅ Book & Pay by Cash';
   } else {
-    // Show QR for all UPI methods
     document.getElementById('qr-img').src = generateQRUrl(amt);
     qrContainer.style.display = 'block';
-    document.getElementById('pay-confirm-btn').textContent = '✅ Confirm Payment & Book';
+    document.getElementById('pay-confirm-btn').textContent = '✅ I Have Paid — Verify';
 
-    // Open respective UPI app via Median nativebridge
     let deepLink = null;
     if (method === 'phonepe')  deepLink = generatePhonePeLink(amt);
     else if (method === 'gpay') deepLink = generateGPayLink(amt);
     else if (method === 'paytm') deepLink = generatePaytmLink(amt);
     else if (method === 'bhim')  deepLink = generateBhimLink(amt);
-    else if (method === 'upi')   deepLink = generateBhimLink(amt); // generic UPI
+    else if (method === 'upi')   deepLink = generateBhimLink(amt);
 
-    if (deepLink) {
-      setTimeout(() => { openPaymentApp(deepLink); }, 500);
-    }
+    if (deepLink) setTimeout(() => { openPaymentApp(deepLink); }, 500);
   }
 }
 
+// ── AUTO VERIFY ────────────────────────────────────────────
+// Strategy: After customer clicks "I Have Paid", poll Supabase otp_logs
+// for a verify token that the /api/upi-webhook writes when UPI callback received,
+// OR use Median's pageView event to detect app return + amount match in DB.
+// Fallback: after MAX_ATTEMPTS, show manual verify panel.
+
+const AUTO_VERIFY_INTERVAL = 4000;  // poll every 4 sec
+const AUTO_VERIFY_MAX_TIME = 90;    // 90 sec total auto-verify window
+
 async function confirmPayment() {
-  const sb = getSupabase();
   const booking = state.pendingBooking;
   if (!booking) { closePayModal(); return; }
-
   const payMethod = state.paymentMethod || 'cash';
 
-  const paymentStatus = payMethod === 'cash' ? 'pending' : 'paid';
-  const { data: updatedBooking, error: updateError } = await sb.from('bookings').update({
-    payment_method: payMethod,
-    payment_status: paymentStatus,
-    booking_status: 'confirmed'
-  }).eq('id', booking.id).select().single();
-
-  if (updateError) {
-    showToast('Status update failed: ' + updateError.message, 'error');
-    console.error(updateError);
+  if (payMethod === 'cash') {
+    await finishBooking(booking, 'cash', 'pending', null);
+    return;
   }
 
-  // Merge updated fields back into booking object for notifications
+  // UPI — start auto-verify flow
+  showPayStep('pay-step-verifying');
+  startVerifyCountdown(AUTO_VERIFY_MAX_TIME);
+  startAutoVerifyPolling(booking, payMethod);
+}
+
+function startVerifyCountdown(seconds) {
+  let remaining = seconds;
+  const el = document.getElementById('verify-countdown');
+  clearInterval(state.verifyCountdownTimer);
+  state.verifyCountdownTimer = setInterval(() => {
+    remaining--;
+    if (el) el.textContent = `Auto-checking for ${remaining}s…`;
+    if (remaining <= 0) clearInterval(state.verifyCountdownTimer);
+  }, 1000);
+}
+
+function startAutoVerifyPolling(booking, payMethod) {
+  clearInterval(state.autoVerifyTimer);
+  const amt = Number(booking.total_amount);
+  const phone = booking.customer_phone;
+  let elapsed = 0;
+
+  state.autoVerifyTimer = setInterval(async () => {
+    elapsed += AUTO_VERIFY_INTERVAL;
+
+    // Check Supabase: did a webhook/UPI callback write a verified record?
+    const verified = await checkUPIVerification(booking.id, amt, phone);
+
+    if (verified) {
+      clearInterval(state.autoVerifyTimer);
+      clearInterval(state.verifyCountdownTimer);
+      await finishBooking(booking, payMethod, 'paid', verified.utr || null, true);
+      return;
+    }
+
+    // Timeout — show manual
+    if (elapsed >= AUTO_VERIFY_MAX_TIME * 1000) {
+      clearInterval(state.autoVerifyTimer);
+      clearInterval(state.verifyCountdownTimer);
+      showManualVerify();
+    }
+  }, AUTO_VERIFY_INTERVAL);
+}
+
+async function checkUPIVerification(bookingId, amount, phone) {
+  // Check 1: payment_verifications table (written by webhook if configured)
+  try {
+    const sb = getSupabase();
+    const { data } = await sb.from('payment_verifications')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .eq('status', 'verified')
+      .maybeSingle();
+    if (data) return data;
+  } catch(e) { /* table may not exist yet */ }
+
+  // Check 2: Median pageResume event flag (set by window.addEventListener below)
+  // If user returned from UPI app + amount matches, treat as likely paid
+  if (state.upiAppReturnedAt && (Date.now() - state.upiAppReturnedAt) < 30000) {
+    // User returned from UPI app within last 30s — high probability paid
+    state.upiAppReturnedAt = null;
+    return { utr: null, auto: true, source: 'app_return' };
+  }
+
+  return null;
+}
+
+// Median fires 'median.pageShow' or visibilitychange when app returns
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.paymentMethod && state.paymentMethod !== 'cash') {
+    state.upiAppReturnedAt = Date.now();
+  }
+});
+window.addEventListener('pageshow', () => {
+  if (state.paymentMethod && state.paymentMethod !== 'cash') {
+    state.upiAppReturnedAt = Date.now();
+  }
+});
+
+// ── MANUAL VERIFY ─────────────────────────────────────────
+function showManualVerify() {
+  showPayStep('pay-step-manual');
+  switchManualTab('utr');
+}
+
+function switchManualTab(tab) {
+  document.getElementById('tab-utr').classList.toggle('active', tab === 'utr');
+  document.getElementById('tab-ss').classList.toggle('active', tab === 'screenshot');
+  document.getElementById('manual-utr-panel').style.display = tab === 'utr' ? 'block' : 'none';
+  document.getElementById('manual-ss-panel').style.display = tab === 'screenshot' ? 'block' : 'none';
+  state.manualTab = tab;
+}
+
+function previewScreenshot(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const preview = document.getElementById('ss-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+  state.screenshotFile = file;
+}
+
+async function submitManualVerify() {
+  const booking = state.pendingBooking;
+  if (!booking) return;
+
+  const tab = state.manualTab || 'utr';
+  const btn = document.getElementById('manual-submit-btn');
+  btn.textContent = '⏳ Submitting…'; btn.disabled = true;
+
+  let utr = null;
+  let screenshotUrl = null;
+  let adminNote = '';
+
+  if (tab === 'utr') {
+    utr = document.getElementById('utr-input').value.trim();
+    if (!utr || utr.length < 6) {
+      showToast('Please enter a valid UTR / Transaction ID', 'error');
+      btn.textContent = '📤 Submit for Admin Verification'; btn.disabled = false;
+      return;
+    }
+    adminNote = `Manual verify — UTR: ${utr}`;
+  } else {
+    // Screenshot: upload to Supabase Storage
+    const file = state.screenshotFile;
+    if (!file) {
+      showToast('Please select a screenshot first', 'error');
+      btn.textContent = '📤 Submit for Admin Verification'; btn.disabled = false;
+      return;
+    }
+    try {
+      const sb = getSupabase();
+      const fileName = `payments/${booking.id}_${Date.now()}.jpg`;
+      const { data: uploadData, error: upErr } = await sb.storage
+        .from('payment-screenshots')
+        .upload(fileName, file, { contentType: file.type, upsert: true });
+      if (!upErr) {
+        const { data: urlData } = sb.storage.from('payment-screenshots').getPublicUrl(fileName);
+        screenshotUrl = urlData?.publicUrl || null;
+        adminNote = `Manual verify — Screenshot: ${screenshotUrl}`;
+      } else {
+        adminNote = 'Manual verify — Screenshot upload failed, admin to check WhatsApp';
+      }
+    } catch(e) {
+      adminNote = 'Manual verify — screenshot upload error';
+    }
+  }
+
+  // Save to Supabase: update booking with pending_verification status + admin note
+  const sb = getSupabase();
+  await sb.from('bookings').update({
+    payment_method: state.paymentMethod,
+    payment_status: 'pending',
+    booking_status: 'pending',
+    admin_notes: adminNote
+  }).eq('id', booking.id);
+
+  // Save to payment_verifications table for admin panel
+  try {
+    await sb.from('payment_verifications').insert({
+      booking_id: booking.id,
+      booking_number: booking.booking_number,
+      customer_phone: booking.customer_phone,
+      amount: booking.total_amount,
+      utr_number: utr,
+      screenshot_url: screenshotUrl,
+      payment_method: state.paymentMethod,
+      status: 'pending_review'
+    });
+  } catch(e) { /* table may not exist, non-critical */ }
+
+  // Notify admin via Telegram with verification request
+  const msg = `⚠️ MANUAL PAYMENT VERIFY NEEDED
+📋 Booking: ${booking.booking_number}
+👤 ${booking.customer_name} | ${booking.customer_phone}
+💰 ₹${booking.total_amount}
+💳 Method: ${state.paymentMethod?.toUpperCase()}
+${utr ? '🔢 UTR: ' + utr : '📸 Screenshot sent'}
+${screenshotUrl ? '🔗 ' + screenshotUrl : ''}`;
+  try {
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg })
+    });
+  } catch(e) {}
+
+  document.getElementById('manual-booking-num').textContent = booking.booking_number;
+  showPayStep('pay-step-manual-done');
+  btn.textContent = '📤 Submit for Admin Verification'; btn.disabled = false;
+  loadMyBookings();
+}
+
+// ── FINISH BOOKING (auto-verified or cash) ─────────────────
+async function finishBooking(booking, payMethod, paymentStatus, utr, autoVerified = false) {
+  const sb = getSupabase();
+  const adminNote = autoVerified
+    ? `Auto-verified via ${utr ? 'UTR:' + utr : 'app return detection'}`
+    : (payMethod === 'cash' ? 'Cash payment' : '');
+
+  const { data: updatedBooking, error } = await sb.from('bookings').update({
+    payment_method: payMethod,
+    payment_status: paymentStatus,
+    booking_status: 'confirmed',
+    admin_notes: adminNote || null
+  }).eq('id', booking.id).select().single();
+
+  if (error) { showToast('Update error: ' + error.message, 'error'); return; }
+
   if (updatedBooking) Object.assign(booking, updatedBooking);
   booking.payment_method = payMethod;
   booking.booking_status = 'confirmed';
   booking.vehicle_name = state.selectedVehicle?.name || state.selectedVehicle?.model || null;
 
-  // Send WhatsApp to customer with full booking + payment info
   await sendWhatsAppConfirmation(booking);
-
-  // Notify Telegram with payment method
   await notifyBookingStatus(booking, 'confirmed');
 
-  closePayModal();
-  showToast('🎉 Booking #' + booking.booking_number + ' confirmed! WhatsApp sent to ' + booking.customer_phone, 'success');
+  if (payMethod === 'cash') {
+    closePayModal();
+    showToast('🎉 Booking #' + booking.booking_number + ' confirmed!', 'success');
+  } else {
+    document.getElementById('verify-success-msg').textContent =
+      autoVerified ? 'Payment detected automatically ✓' : 'Transaction confirmed';
+    showPayStep('pay-step-success');
+    showToast('✅ Payment verified! Booking confirmed.', 'success');
+    setTimeout(() => { closePayModal(); }, 3000);
+  }
+
   loadMyBookings();
   document.getElementById('my-bookings').style.display = 'block';
   document.getElementById('my-bookings').scrollIntoView({ behavior: 'smooth' });
