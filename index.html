@@ -1427,8 +1427,14 @@ function renderFareSelect() {
     per_day: 'Per Day', waiting_charge: 'Waiting Charge', night_surcharge: 'Night Surcharge',
     airport_pickup: 'Airport Pickup', extra_km: 'Extra KM'
   };
-  sel.innerHTML = '<option value="">Choose fare type…</option>' +
-    state.fareRules.map(r => `<option value="${r.id}">${ruleNames[r.rule_type] || r.rule_type} — ${r.vehicle_type === 'All' ? 'All Vehicles' : r.vehicle_type} — ₹${r.amount}</option>`).join('');
+  // Filter: show only rules that match the selected vehicle type OR apply to 'All'
+  const vType = state.selectedVehicle ? state.selectedVehicle.vehicle_type : null;
+  const filtered = vType
+    ? state.fareRules.filter(r => r.vehicle_type === vType || r.vehicle_type === 'All')
+    : state.fareRules;
+  const placeholder = vType ? `Choose fare type for ${vType}…` : 'Select a vehicle first…';
+  sel.innerHTML = '<option value="">' + placeholder + '</option>' +
+    filtered.map(r => `<option value="${r.id}">${ruleNames[r.rule_type] || r.rule_type} — ₹${r.amount}</option>`).join('');
 }
 
 function getFareForType(vehicleType) {
@@ -1551,7 +1557,11 @@ function selectVehicle(id) {
   document.querySelectorAll('.vehicle-card').forEach(c => {
     c.classList.toggle('selected', c.dataset.id === id);
   });
-  updateFarePreview();
+  // Reset fare selection and re-populate dropdown for this vehicle type
+  document.getElementById('fare-select').value = '';
+  state.selectedFareRule = null;
+  document.getElementById('fare-preview').style.display = 'none';
+  renderFareSelect();
 }
 
 function updateFarePreview() {
